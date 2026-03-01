@@ -198,6 +198,43 @@ ESP-NOW broadcast no soporta cifrado nativo (solo unicast). Se implementa cifrad
 
 ---
 
+## 11b. UX de emparejamiento — solo pulsador físico
+
+No se requiere app móvil para gestionar grupos. Todo se opera con un único pulsador y un LED.
+
+### Comportamiento del pulsador
+
+| Acción | Resultado |
+|--------|-----------|
+| **Primera vez (boot)** | Autogenera clave AES aleatoria → queda en su propio grupo |
+| **Mantener 10s** | Genera nueva clave → resetea grupo |
+| **Pulso corto** | Modo *share*: emite la clave actual por ESP-NOW durante 15–30s |
+| **Mantener 2s** | Modo *join*: escucha pairing; si hay un dispositivo emitiendo, recibe y guarda la clave |
+
+La clave se persiste en **NVS** (Non-Volatile Storage, flash del ESP32) — sobrevive a apagados y reinicios.
+
+### Estados del LED
+
+| Patrón | Significado |
+|--------|-------------|
+| **Fijo** | En grupo, operativo |
+| **Parpadeo lento** | Modo share — emitiendo clave |
+| **Parpadeo rápido** | Modo join — esperando/recibiendo clave |
+
+### Flujo típico en una salida
+
+1. Todos encienden sus dispositivos (ya conectados a sus intercoms)
+2. El jefe de ruta hace **pulso corto** → LED parpadeo lento
+3. El resto hace **2s pulsado** → LED parpadeo rápido → al recibir clave, LED fijo
+4. A rodar
+5. Al volver, simplemente apagar (la clave se mantiene para la próxima salida)
+
+### Nota de seguridad
+
+Durante el pairing, la clave viaja en claro por ESP-NOW. Para el modelo de amenaza de un walkie de motos es aceptable: un atacante necesitaría estar físicamente en rango durante la ventana exacta de 15–30 segundos con hardware ESP32. Si en el futuro se requiere mayor seguridad, ECDH (Diffie-Hellman sobre curva elíptica, soportado por mbedTLS en ESP-IDF) resolvería esto de forma transparente sin cambiar el UX.
+
+---
+
 ## 12. Retos pendientes de validar
 
 1. **BT HFP AG + ESP-NOW simultáneo:** coexistencia de BT Classic y Wi-Fi en el mismo chip (comparten radio 2.4GHz). ESP-IDF lo soporta con time-slicing pero hay que validar en práctica.
