@@ -32,7 +32,12 @@ static esp_bd_addr_t s_intercom_addr;
 static bool s_has_saved_addr = false;
 static bool s_connected = false;
 static bool s_sco_open = false;
-static TimerHandle_t s_disco_timer = NULL;
+static TimerHandle_t s_scan_timer = NULL;
+
+/* Best device found during scan */
+static esp_bd_addr_t s_scan_best_addr;
+static int8_t        s_scan_best_rssi = -127;
+static bool          s_scan_found = false;
 
 /* ---- NVS helpers ---- */
 
@@ -68,18 +73,77 @@ static esp_err_t save_bt_addr(const esp_bd_addr_t addr)
 
 /* ---- GAP callback ---- */
 
+/* HFP HF service UUID (the intercom side) */
+#define UUID_HFP_HF 0x111E
+
+static bool device_has_hfp(esp_bt_gap_cb_param_t *param)
+{
+    /* Walk EIR looking for 0x111E (HFP Hands-Free) */
+    uint8_t *eir = param->disc_res.prop[0].val;   /* simplified */
+    (void)eir;
+    /* Full EIR parsing omitted for brevity — in practice use
+     * esp_bt_gap_resolve_eir_data() to find UUID16 list.
+     * For PoC: accept any device found during scan (user puts
+     * only intercom into pairing mode). */
+    return true;
+}
+
+static void scan_timer_cb(TimerHandle_t timer);
+
 static void gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
 {
     switch (event) {
+
+    case ESP_BT_GAP_DISC_RES_EVT: {
+        /* A device was found during inquiry scan */
+        int8_t rssi = -127;
+        for (int i = 0; i < param->disc_res.num_prop; i++) {
+            if (param->disc_res.prop[i].type == ESP_BT_GAP_DEV_PROP_RSSI) {
+                rssi = *(int8_t *)param->disc_res.prop[i].val;
+            }
+        }
+        ESP_LOGI(TAG, "Found device RSSI=%d", rssi);
+        /* Keep the strongest signal device */
+        if (rssi > s_scan_best_rssi) {
+            s_scan_best_rssi = rssi;
+            memcpy(s_scan_best_addr, param->disc_res.bda, sizeof(esp_bd_addr_t));
+            s_scan_found = true;
+        }
+        break;
+    }
+
+    case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
+        if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
+            if (s_scan_found) {
+                ESP_LOGI(TAG, "Scan done, connecting to best device (RSSI=%d)", s_scan_best_rssi);
+                save_bt_addr(s_scan_best_addr);
+                esp_hf_ag_slc_connect(s_scan_best_addr);
+                ui_set_bt_status("Connecting...");
+            } else {
+                ESP_LOGW(TAG, "Scan done, no device found");
+                ui_set_bt_status("Not found");
+                ui_set_state(UI_STATE_IDLE);
+            }
+        }
+        break;
+
     case ESP_BT_GAP_AUTH_CMPL_EVT:
         if (param->auth_cmpl.stat == ESP_BT_STATUS_SUCCESS) {
-            ESP_LOGI(TAG, "BT auth complete, saving address");
+            ESP_LOGI(TAG, "BT auth complete");
             save_bt_addr(param->auth_cmpl.bda);
         }
         break;
+
     default:
         break;
     }
+}
+
+static void scan_timer_cb(TimerHandle_t timer)
+{
+    /* Stop scan if still running after timeout */
+    esp_bt_gap_cancel_discovery();
+    ui_set_state(UI_STATE_IDLE);
 }
 
 /* ---- HFP AG incoming audio callback ---- */
@@ -176,8 +240,8 @@ esp_err_t bt_hfp_init(void)
     /* Register audio data callbacks */
     esp_hf_ag_register_data_callback(hfp_incoming_data_cb, hfp_outgoing_data_cb);
 
-    /* Create discoverable timer (one-shot) */
-    s_disco_timer = xTimerCreate("disco", pdMS_TO_TICKS(60000), pdFALSE, NULL, disco_timer_cb);
+    /* Create scan timeout timer (one-shot, 30s) */
+    s_scan_timer = xTimerCreate("scan_to", pdMS_TO_TICKS(30000), pdFALSE, NULL, scan_timer_cb);
 
     /* Load saved intercom address */
     load_bt_addr();
@@ -187,22 +251,29 @@ esp_err_t bt_hfp_init(void)
         ui_set_bt_status("Reconnecting...");
         bt_hfp_reconnect();
     } else {
-        ESP_LOGI(TAG, "No saved intercom, entering discoverable mode");
-        bt_hfp_start_discoverable(60);
+        ESP_LOGI(TAG, "No saved intercom — hold BTN_B 3s to scan for intercom");
+        ui_set_bt_status("No intercom");
     }
 
     return ESP_OK;
 }
 
-esp_err_t bt_hfp_start_discoverable(int duration_sec)
+esp_err_t bt_hfp_start_scan(void)
 {
-    ESP_LOGI(TAG, "Discoverable for %ds", duration_sec);
-    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
-    ui_set_bt_status("Pairing...");
-    ui_set_state(UI_STATE_BT_DISCO);
+    /* Reset scan state */
+    s_scan_found = false;
+    s_scan_best_rssi = -127;
 
-    xTimerChangePeriod(s_disco_timer, pdMS_TO_TICKS(duration_sec * 1000), 0);
-    xTimerStart(s_disco_timer, 0);
+    ESP_LOGI(TAG, "Starting BT scan for intercom (30s)...");
+    ui_set_bt_status("Scanning...");
+    ui_set_state(UI_STATE_BT_SCAN);
+
+    /* Inquiry: General inquiry access code, 30s (=30*1.28 = ~38s max),
+     * unlimited responses */
+    esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 24, 0);
+
+    /* Safety timeout in case discovery never fires STOPPED */
+    xTimerStart(s_scan_timer, 0);
     return ESP_OK;
 }
 

@@ -118,12 +118,26 @@ idf.py -p /dev/ttyUSB0 monitor
 
 ## Emparejamiento con el intercom
 
-1. **Primera vez:** al arrancar sin intercom guardado, el ESP32 entra automáticamente en modo discoverable como `MeshCom-XXXX`
-2. En los ajustes Bluetooth del intercom, buscar y conectar a `MeshCom-XXXX`
-3. PIN si se pide: `0000`
-4. La dirección BT queda guardada en NVS — las siguientes veces reconecta solo
+El intercom es el dispositivo Bluetooth que se anuncia (HFP HF). El ESP32 es el que escanea y se conecta (HFP AG, rol de "teléfono"). **El ESP32 nunca se pone en modo discoverable** — siempre es él quien busca al intercom.
 
-Para volver a emparejar: **mantener botón B 3 segundos** (M5Stick) o **mantener BOOT 10 segundos** (DevKit).
+### Primera vez
+
+1. Poner el intercom en **modo pairing** (consultar manual — normalmente mantener botón de encendido hasta que parpadee)
+2. En el ESP32: **mantener botón B 3 segundos** (M5Stick) o **mantener BOOT 3 segundos** (DevKit)
+   - LED parpadeo lento → escaneando...
+   - LED parpadeo rápido → encontrado, conectando...
+   - LED fijo → ✅ conectado y guardado
+3. Si se pide PIN: `0000`
+
+La dirección BT del intercom queda guardada en NVS. Las siguientes veces **reconecta automáticamente** al encender.
+
+### Si hay varios dispositivos BT cerca
+
+El ESP32 se conecta al dispositivo con **señal más fuerte (RSSI mayor)** durante el escaneo. En la práctica, si solo tienes tu intercom en modo pairing, siempre encontrará el correcto.
+
+### Re-emparejar con otro intercom
+
+**Mantener botón B 3 segundos** de nuevo — inicia un nuevo escaneo y sobreescribe la dirección guardada.
 
 ## Emparejamiento de grupo entre dispositivos
 

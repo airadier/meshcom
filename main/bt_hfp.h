@@ -12,8 +12,12 @@
 /** Initialize Bluetooth stack and HFP AG profile */
 esp_err_t bt_hfp_init(void);
 
-/** Enter discoverable mode for duration_sec seconds */
-esp_err_t bt_hfp_start_discoverable(int duration_sec);
+/**
+ * Scan for nearby Bluetooth HFP devices (intercom in pairing mode).
+ * Connects automatically to the device with strongest RSSI.
+ * Duration: ~30s. User must first put the intercom into pairing mode.
+ */
+esp_err_t bt_hfp_start_scan(void);
 
 /** Force reconnection to saved intercom */
 esp_err_t bt_hfp_reconnect(void);

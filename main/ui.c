@@ -58,7 +58,7 @@ static void led_timer_cb(TimerHandle_t timer)
         break;
     case UI_STATE_SHARE:
     case UI_STATE_JOIN:
-    case UI_STATE_BT_DISCO:
+    case UI_STATE_BT_SCAN:
         led_set(!s_led_on); /* toggle */
         break;
     }
@@ -108,7 +108,7 @@ static void handle_button_a(int hold_ms)
 #ifdef BOARD_DEVKIT
     if (hold_ms > 10000) {
         ESP_LOGI(TAG, "BTN: BT discoverable");
-        bt_hfp_start_discoverable(60);
+        bt_hfp_start_scan();
     } else if (hold_ms > 5000) {
         ESP_LOGI(TAG, "BTN: New group");
         group_mgr_new_group();
@@ -141,7 +141,7 @@ static void handle_button_b(int hold_ms)
 {
     if (hold_ms > 3000) {
         ESP_LOGI(TAG, "BTN B: BT discoverable");
-        bt_hfp_start_discoverable(60);
+        bt_hfp_start_scan();
     } else {
         ESP_LOGI(TAG, "BTN B: BT reconnect");
         bt_hfp_reconnect();
@@ -231,7 +231,7 @@ void ui_set_state(ui_state_t state)
     switch (state) {
     case UI_STATE_SHARE:    period_ms = 500; break;
     case UI_STATE_JOIN:     period_ms = 150; break;
-    case UI_STATE_BT_DISCO: period_ms = 300; break;
+    case UI_STATE_BT_SCAN: period_ms = 300; break;
     default:                period_ms = 1000; break;
     }
     xTimerChangePeriod(s_led_timer, pdMS_TO_TICKS(period_ms), 0);

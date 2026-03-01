@@ -10,7 +10,7 @@ typedef enum {
     UI_STATE_IDLE,
     UI_STATE_SHARE,
     UI_STATE_JOIN,
-    UI_STATE_BT_DISCO,
+    UI_STATE_BT_SCAN,
 } ui_state_t;
 
 /** Initialize UI (buttons, LED, display if available) */
