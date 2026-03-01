@@ -235,6 +235,25 @@ Durante el pairing, la clave viaja en claro por ESP-NOW. Para el modelo de amena
 
 ---
 
+## 11c. UX de emparejamiento con el intercom (BT)
+
+El M5StickC Plus 2 tiene dos botones, lo que permite separar funciones:
+
+- **Botón A** → gestión de grupo (ver sección 11b)
+- **Botón B** → gestión de conexión BT con el intercom
+
+| Acción botón B | Resultado |
+|----------------|-----------|
+| **Hold 3s** | Entra en modo discoverable 60s — el ESP32 aparece como `MeshCom-XXXX` en el menú del intercom. El usuario conecta desde los ajustes BT del intercom. Dirección guardada en NVS. |
+| **Pulso corto** | Fuerza reconexión al intercom guardado |
+| **Primera vez (sin intercom en NVS)** | Entra automáticamente en modo discoverable al arrancar |
+
+Pantalla muestra: `BT: Pairing...` / `BT: Connected` / `BT: Lost`
+
+Para **DevKit genérico** (un solo botón BOOT/GPIO0): al primer arranque sin intercom guardado entra en discoverable automáticamente. Para volver a emparejar: mantener BOOT 10s.
+
+---
+
 ## 12. Retos pendientes de validar
 
 1. **BT HFP AG + ESP-NOW simultáneo:** coexistencia de BT Classic y Wi-Fi en el mismo chip (comparten radio 2.4GHz). ESP-IDF lo soporta con time-slicing pero hay que validar en práctica.
