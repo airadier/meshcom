@@ -138,11 +138,14 @@ ESP-NOW broadcast no soporta cifrado nativo (solo unicast). Se implementa cifrad
 
 ### Gestión de claves
 
-| Método | Descripción |
-|--------|-------------|
-| QR code | El "jefe de ruta" genera QR con clave de grupo desde la app. Los demás escanean y la clave se transfiere al ESP32 por BLE. |
-| PIN compartido | Todos introducen el mismo PIN de 6 dígitos → derivación PBKDF2 → clave AES. |
-| Preflasheado | Para grupos fijos, la misma clave se flashea en todos los dispositivos. |
+La clave de grupo se gestiona íntegramente desde el dispositivo físico, sin app ni configuración externa. Ver sección 11b para el flujo completo; en resumen:
+
+- **Generación:** mantener el botón de grupo 10 segundos → genera una nueva clave AES aleatoria y resetea el grupo.
+- **Compartir (share):** pulso corto → el dispositivo emite la clave actual por ESP-NOW durante 15–30 s.
+- **Unirse (join):** mantener 2 segundos → el dispositivo escucha; si hay alguien en modo share, recibe y guarda la clave.
+- **Persistencia:** la clave se almacena en NVS (flash) y sobrevive a apagados y reinicios.
+
+> ~~Métodos anteriores descartados: QR code (requería app + BLE), PIN compartido (PBKDF2), preflasheado (clave fija). Ninguno se implementa.~~
 
 ---
 
