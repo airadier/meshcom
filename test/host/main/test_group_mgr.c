@@ -134,3 +134,44 @@ void test_group_mgr_save_and_load_key(void)
     TEST_ASSERT_EQUAL_UINT16(99, seq);
     TEST_ASSERT_EQUAL_MEMORY(data, out, 2);
 }
+
+void test_group_mgr_nvs_persistence_across_reinit(void)
+{
+    /* T11: Save a key, re-init group_mgr, verify the key persists via NVS mock.
+     * This test was previously broken by B6 (static NVS vars in header). */
+    mock_state_reset();
+    group_mgr_init();
+
+    /* Save a known key */
+    uint8_t known_key[GROUP_KEY_LEN] = {
+        0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22,
+        0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00
+    };
+    uint16_t known_id = 0xABCD;
+
+    TEST_ASSERT_EQUAL(ESP_OK, group_mgr_save_key(known_key, known_id));
+
+    /* Re-init WITHOUT resetting NVS mock — simulates reboot with persistent NVS */
+    group_mgr_init();
+
+    /* Key and ID should have been loaded from NVS */
+    uint8_t loaded_key[GROUP_KEY_LEN];
+    uint16_t loaded_id;
+    group_mgr_get_key(loaded_key);
+    group_mgr_get_id(&loaded_id);
+
+    TEST_ASSERT_EQUAL_MEMORY(known_key, loaded_key, GROUP_KEY_LEN);
+    TEST_ASSERT_EQUAL_UINT16(known_id, loaded_id);
+
+    /* Verify encryption still works with the persisted key */
+    uint8_t data[] = {0xDE, 0xAD};
+    uint8_t pkt[64];
+    int pkt_len = group_mgr_encrypt(data, sizeof(data), 1, pkt, sizeof(pkt));
+    TEST_ASSERT_GREATER_THAN(0, pkt_len);
+
+    uint8_t out[64];
+    uint16_t seq;
+    int out_len = group_mgr_decrypt(pkt, pkt_len, &seq, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(2, out_len);
+    TEST_ASSERT_EQUAL_MEMORY(data, out, 2);
+}

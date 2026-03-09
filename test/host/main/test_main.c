@@ -9,6 +9,7 @@ extern void test_group_mgr_decrypt_wrong_group(void);
 extern void test_group_mgr_decrypt_tampered(void);
 extern void test_group_mgr_new_group_changes_key(void);
 extern void test_group_mgr_save_and_load_key(void);
+extern void test_group_mgr_nvs_persistence_across_reinit(void);
 
 /* test_audio_pipe.c */
 extern void test_vad_silence_rejected(void);
@@ -28,6 +29,7 @@ int main(void)
     RUN_TEST(test_group_mgr_decrypt_tampered);
     RUN_TEST(test_group_mgr_new_group_changes_key);
     RUN_TEST(test_group_mgr_save_and_load_key);
+    RUN_TEST(test_group_mgr_nvs_persistence_across_reinit);
 
     /* audio_pipe tests */
     RUN_TEST(test_vad_silence_rejected);
