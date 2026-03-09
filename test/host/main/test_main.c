@@ -38,6 +38,11 @@ extern void test_frag_missing_fragment(void);
 extern void test_frag_too_large(void);
 extern void test_frag_small_payload_no_frag(void);
 
+/* test_pairing.c */
+extern void test_pairing_truncated_packet_ignored(void);
+extern void test_pairing_correct_size_truncated_key_ignored(void);
+extern void test_pairing_zero_length_ignored(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -76,6 +81,11 @@ int main(void)
     RUN_TEST(test_frag_missing_fragment);
     RUN_TEST(test_frag_too_large);
     RUN_TEST(test_frag_small_payload_no_frag);
+
+    /* pairing truncation tests */
+    RUN_TEST(test_pairing_truncated_packet_ignored);
+    RUN_TEST(test_pairing_correct_size_truncated_key_ignored);
+    RUN_TEST(test_pairing_zero_length_ignored);
 
     return UNITY_END();
 }

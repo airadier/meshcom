@@ -6,6 +6,8 @@
 
 #include "esp_err.h"
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #define PAIRING_MAGIC       0x4D435052  /* "MCPR" */
 
