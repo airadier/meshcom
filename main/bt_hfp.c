@@ -18,11 +18,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
+#include "freertos/stream_buffer.h"
 
 #include <string.h>
 #include <stdbool.h>
 
 static const char *TAG = "bt_hfp";
+
+/* SCO outgoing audio buffer: ~4KB for PCM 8kHz 16-bit mono (~250ms) */
+#define SCO_OUT_BUF_SIZE    4096
+static StreamBufferHandle_t s_sco_out_buf = NULL;
 
 #define NVS_NAMESPACE   "meshcom"
 #define NVS_KEY_BTADDR  "intercom_addr"
@@ -158,9 +163,16 @@ static void hfp_incoming_data_cb(const uint8_t *buf, uint32_t len)
 
 static uint32_t hfp_outgoing_data_cb(uint8_t *buf, uint32_t len)
 {
-    /* TODO: Fill buf with PCM from mesh rx buffer
-     * For now, return silence */
-    memset(buf, 0, len);
+    if (!s_sco_out_buf) {
+        memset(buf, 0, len);
+        return len;
+    }
+
+    size_t read = xStreamBufferReceive(s_sco_out_buf, buf, len, 0);
+    /* Fill remaining with zeros (comfort noise) if underrun */
+    if (read < len) {
+        memset(buf + read, 0, len - read);
+    }
     return len;
 }
 
@@ -240,6 +252,13 @@ esp_err_t bt_hfp_init(void)
     /* Register audio data callbacks */
     esp_hf_ag_register_data_callback(hfp_incoming_data_cb, hfp_outgoing_data_cb);
 
+    /* Create SCO outgoing audio buffer */
+    s_sco_out_buf = xStreamBufferCreate(SCO_OUT_BUF_SIZE, 1);
+    if (!s_sco_out_buf) {
+        ESP_LOGE(TAG, "Failed to create SCO output buffer");
+        return ESP_ERR_NO_MEM;
+    }
+
     /* Create scan timeout timer (one-shot, 30s) */
     s_scan_timer = xTimerCreate("scan_to", pdMS_TO_TICKS(30000), pdFALSE, NULL, scan_timer_cb);
 
@@ -292,12 +311,15 @@ esp_err_t bt_hfp_reconnect(void)
 esp_err_t bt_hfp_send_audio(const uint8_t *pcm, size_t len)
 {
     if (!s_sco_open) return ESP_ERR_INVALID_STATE;
-    /* Audio is sent via the outgoing_data_cb pull model.
-     * TODO: Buffer pcm data so outgoing_data_cb can read it.
-     * For now this is a placeholder — the real implementation needs
-     * a ring buffer that outgoing_data_cb pulls from. */
-    (void)pcm;
-    (void)len;
+    if (!s_sco_out_buf) return ESP_ERR_INVALID_STATE;
+
+    /* Non-blocking write to stream buffer.
+     * If buffer is full, data is silently dropped — better to lose
+     * audio than to block the mesh receive path. */
+    size_t written = xStreamBufferSend(s_sco_out_buf, pcm, len, 0);
+    if (written < len) {
+        ESP_LOGD(TAG, "SCO buffer full, dropped %d bytes", (int)(len - written));
+    }
     return ESP_OK;
 }
 

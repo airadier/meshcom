@@ -22,7 +22,12 @@ esp_err_t bt_hfp_start_scan(void);
 /** Force reconnection to saved intercom */
 esp_err_t bt_hfp_reconnect(void);
 
-/** Send PCM audio to intercom via SCO link */
+/**
+ * Send PCM audio to intercom via SCO link.
+ * Writes to internal stream buffer (non-blocking, drops if full).
+ * @param pcm   PCM samples (16-bit signed, 8kHz mono)
+ * @param len   Length in bytes
+ */
 esp_err_t bt_hfp_send_audio(const uint8_t *pcm, size_t len);
 
 /** Check if intercom is connected */

@@ -40,6 +40,7 @@ add_executable(meshcom_host_test
     main/test_main.c
     main/test_group_mgr.c
     main/test_audio_pipe.c
+    main/test_bt_hfp_buffer.c
     main/mocks.c
     ${MESHCOM_SRC}/group_mgr.c
     ${MESHCOM_SRC}/audio_pipe.c

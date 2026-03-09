@@ -19,6 +19,11 @@ extern void test_dedup_rejects_duplicate_seq(void);
 extern void test_dedup_accepts_new_seq(void);
 extern void test_dedup_window_wraps(void);
 
+/* test_bt_hfp_buffer.c */
+extern void test_stream_buffer_write_read(void);
+extern void test_stream_buffer_overflow_drops(void);
+extern void test_stream_buffer_underrun_returns_zeros(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -38,6 +43,11 @@ int main(void)
     RUN_TEST(test_dedup_rejects_duplicate_seq);
     RUN_TEST(test_dedup_accepts_new_seq);
     RUN_TEST(test_dedup_window_wraps);
+
+    /* bt_hfp SCO buffer tests */
+    RUN_TEST(test_stream_buffer_write_read);
+    RUN_TEST(test_stream_buffer_overflow_drops);
+    RUN_TEST(test_stream_buffer_underrun_returns_zeros);
 
     return UNITY_END();
 }
