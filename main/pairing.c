@@ -16,6 +16,7 @@
 #include "freertos/timers.h"
 
 #include <string.h>
+#include <stdatomic.h>
 
 static const char *TAG = "pairing";
 
@@ -24,8 +25,8 @@ static const char *TAG = "pairing";
 #define PAIRING_DURATION_MS  30000
 #define PAIRING_TX_INTERVAL  500  /* ms between share broadcasts */
 
-static bool s_active = false;
-static bool s_sharing = false;
+static atomic_bool s_active = false;
+static atomic_bool s_sharing = false;
 static TimerHandle_t s_timer = NULL;
 static TaskHandle_t s_share_task = NULL;
 
