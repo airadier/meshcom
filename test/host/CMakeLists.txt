@@ -41,9 +41,11 @@ add_executable(meshcom_host_test
     main/test_group_mgr.c
     main/test_audio_pipe.c
     main/test_bt_hfp_buffer.c
+    main/test_fragmentation.c
     main/mocks.c
     ${MESHCOM_SRC}/group_mgr.c
     ${MESHCOM_SRC}/audio_pipe.c
+    ${MESHCOM_SRC}/espnow_frag.c
 )
 
 target_include_directories(meshcom_host_test PRIVATE

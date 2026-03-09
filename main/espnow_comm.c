@@ -17,7 +17,6 @@
 static const char *TAG = "espnow";
 
 #define ESPNOW_CHANNEL  1
-#define ESPNOW_MAX_DATA 250
 
 /* Broadcast MAC */
 static const uint8_t s_broadcast_mac[ESP_NOW_ETH_ALEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -83,9 +82,25 @@ esp_err_t espnow_comm_init(void)
 
 esp_err_t espnow_broadcast(const uint8_t *data, size_t len)
 {
-    if (len > ESPNOW_MAX_DATA) {
-        ESP_LOGW(TAG, "Packet too large: %d > %d", (int)len, ESPNOW_MAX_DATA);
+    if (len <= ESPNOW_FRAG_PAYLOAD) {
+        /* Fits in a single ESP-NOW frame — send directly */
+        return esp_now_send(s_broadcast_mac, data, len);
+    }
+
+    /* Fragment and send */
+    uint8_t frags[ESPNOW_MAX_FRAGS][ESPNOW_MAX_DATA];
+    size_t frag_lens[ESPNOW_MAX_FRAGS];
+    int n = espnow_fragment(data, len, frags, frag_lens, ESPNOW_MAX_FRAGS);
+    if (n < 0) {
+        ESP_LOGW(TAG, "Fragmentation failed for %d bytes", (int)len);
         return ESP_ERR_INVALID_SIZE;
     }
-    return esp_now_send(s_broadcast_mac, data, len);
+
+    for (int i = 0; i < n; i++) {
+        esp_err_t err = esp_now_send(s_broadcast_mac, frags[i], frag_lens[i]);
+        if (err != ESP_OK) return err;
+    }
+    return ESP_OK;
 }
+
+/* Fragment/reassemble functions are in espnow_frag.c */

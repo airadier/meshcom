@@ -24,6 +24,14 @@ extern void test_stream_buffer_write_read(void);
 extern void test_stream_buffer_overflow_drops(void);
 extern void test_stream_buffer_underrun_returns_zeros(void);
 
+/* test_fragmentation.c */
+extern void test_frag_large_payload(void);
+extern void test_frag_reassemble_correct(void);
+extern void test_frag_reassemble_out_of_order(void);
+extern void test_frag_missing_fragment(void);
+extern void test_frag_too_large(void);
+extern void test_frag_small_payload_no_frag(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -48,6 +56,14 @@ int main(void)
     RUN_TEST(test_stream_buffer_write_read);
     RUN_TEST(test_stream_buffer_overflow_drops);
     RUN_TEST(test_stream_buffer_underrun_returns_zeros);
+
+    /* fragmentation tests */
+    RUN_TEST(test_frag_large_payload);
+    RUN_TEST(test_frag_reassemble_correct);
+    RUN_TEST(test_frag_reassemble_out_of_order);
+    RUN_TEST(test_frag_missing_fragment);
+    RUN_TEST(test_frag_too_large);
+    RUN_TEST(test_frag_small_payload_no_frag);
 
     return UNITY_END();
 }
