@@ -21,6 +21,12 @@ static uint8_t  s_group_key[GROUP_KEY_LEN];
 static uint16_t s_group_id;
 static bool     s_initialized = false;
 
+/* Monotonic nonce: upper 4 bytes = counter, lower 4 bytes = random session id.
+ * This avoids birthday-paradox collisions that pure 8-byte random nonces hit
+ * after ~65K packets (~36 min at 30fps). */
+static uint32_t s_nonce_counter = 0;
+static uint32_t s_nonce_session = 0;
+
 /* ---- NVS helpers ---- */
 
 static esp_err_t load_from_nvs(void)
@@ -67,6 +73,8 @@ esp_err_t group_mgr_init(void)
         err = group_mgr_new_group();
     }
     s_initialized = true;
+    s_nonce_counter = 0;
+    s_nonce_session = esp_random();
     return err;
 }
 
@@ -122,9 +130,19 @@ int group_mgr_encrypt(const uint8_t *plain, size_t len,
     out[2] = (seq >> 8) & 0xFF;
     out[3] = seq & 0xFF;
 
-    /* Random nonce (8 bytes) */
+    /* Monotonic nonce (8 bytes): [counter:4][session_random:4]
+     * Counter increments per packet to guarantee uniqueness within a session.
+     * Session random differentiates across reboots. */
     uint8_t *nonce_ptr = out + 4;
-    esp_fill_random(nonce_ptr, GROUP_NONCE_LEN);
+    nonce_ptr[0] = (s_nonce_counter >> 24) & 0xFF;
+    nonce_ptr[1] = (s_nonce_counter >> 16) & 0xFF;
+    nonce_ptr[2] = (s_nonce_counter >> 8)  & 0xFF;
+    nonce_ptr[3] = s_nonce_counter & 0xFF;
+    nonce_ptr[4] = (s_nonce_session >> 24) & 0xFF;
+    nonce_ptr[5] = (s_nonce_session >> 16) & 0xFF;
+    nonce_ptr[6] = (s_nonce_session >> 8)  & 0xFF;
+    nonce_ptr[7] = s_nonce_session & 0xFF;
+    s_nonce_counter++;
 
     /* Build 12-byte IV: nonce + 4 zero bytes */
     uint8_t iv[12];
