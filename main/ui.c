@@ -26,6 +26,9 @@ static ui_state_t s_state = UI_STATE_IDLE;
 static TimerHandle_t s_led_timer = NULL;
 static bool s_led_on = false;
 static int s_flash_count = 0;
+#if HAS_DISPLAY
+static bool s_display_dirty = true;
+#endif
 
 static void led_set(bool on)
 {
@@ -76,6 +79,9 @@ static char s_disp_activity[8] = "--";
 
 static void display_update(void)
 {
+    if (!s_display_dirty) return;
+    s_display_dirty = false;
+
     uint16_t gid = 0;
     group_mgr_get_id(&gid);
 
@@ -227,6 +233,9 @@ esp_err_t ui_init(void)
 void ui_set_state(ui_state_t state)
 {
     s_state = state;
+#if HAS_DISPLAY
+    s_display_dirty = true;
+#endif
     int period_ms;
     switch (state) {
     case UI_STATE_SHARE:    period_ms = 500; break;
@@ -241,6 +250,7 @@ void ui_set_bt_status(const char *status)
 {
 #if HAS_DISPLAY
     strncpy(s_disp_bt, status, sizeof(s_disp_bt) - 1);
+    s_display_dirty = true;
 #endif
     ESP_LOGI(TAG, "BT: %s", status);
 }
@@ -249,6 +259,7 @@ void ui_set_activity(const char *activity)
 {
 #if HAS_DISPLAY
     strncpy(s_disp_activity, activity, sizeof(s_disp_activity) - 1);
+    s_display_dirty = true;
 #endif
 }
 
