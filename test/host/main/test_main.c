@@ -9,6 +9,10 @@ extern void test_group_mgr_decrypt_wrong_group(void);
 extern void test_group_mgr_decrypt_tampered(void);
 extern void test_group_mgr_new_group_changes_key(void);
 extern void test_group_mgr_save_and_load_key(void);
+extern void test_group_mgr_encrypt_buffer_too_small(void);
+extern void test_group_mgr_decrypt_zero_bytes(void);
+extern void test_group_mgr_decrypt_truncated_5_bytes(void);
+extern void test_group_mgr_decrypt_last_byte_removed(void);
 extern void test_group_mgr_nvs_persistence_across_reinit(void);
 
 /* test_audio_pipe.c */
@@ -44,6 +48,10 @@ int main(void)
     RUN_TEST(test_group_mgr_decrypt_tampered);
     RUN_TEST(test_group_mgr_new_group_changes_key);
     RUN_TEST(test_group_mgr_save_and_load_key);
+    RUN_TEST(test_group_mgr_encrypt_buffer_too_small);
+    RUN_TEST(test_group_mgr_decrypt_zero_bytes);
+    RUN_TEST(test_group_mgr_decrypt_truncated_5_bytes);
+    RUN_TEST(test_group_mgr_decrypt_last_byte_removed);
     RUN_TEST(test_group_mgr_nvs_persistence_across_reinit);
 
     /* audio_pipe tests */

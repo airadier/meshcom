@@ -135,6 +135,61 @@ void test_group_mgr_save_and_load_key(void)
     TEST_ASSERT_EQUAL_MEMORY(data, out, 2);
 }
 
+/* ---- T1/T2: Truncation tests ---- */
+
+void test_group_mgr_encrypt_buffer_too_small(void)
+{
+    init_fresh_group();
+
+    uint8_t pcm[] = {0x01, 0x02, 0x03, 0x04};
+    /* Need pcm_len + GROUP_OVERHEAD = 4 + 28 = 32 bytes, give only 16 */
+    uint8_t out[16];
+    int result = group_mgr_encrypt(pcm, sizeof(pcm), 1, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(-1, result); /* Should return error, not UB */
+}
+
+void test_group_mgr_decrypt_zero_bytes(void)
+{
+    init_fresh_group();
+
+    uint8_t out[64];
+    int result = group_mgr_decrypt(NULL, 0, NULL, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(-1, result);
+}
+
+void test_group_mgr_decrypt_truncated_5_bytes(void)
+{
+    init_fresh_group();
+
+    /* 5 bytes is less than GROUP_OVERHEAD (28) + 1 minimum */
+    uint8_t pkt[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
+    /* Set group_id to match current group */
+    uint16_t gid;
+    group_mgr_get_id(&gid);
+    pkt[0] = (gid >> 8) & 0xFF;
+    pkt[1] = gid & 0xFF;
+
+    uint8_t out[64];
+    int result = group_mgr_decrypt(pkt, 5, NULL, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(-1, result);
+}
+
+void test_group_mgr_decrypt_last_byte_removed(void)
+{
+    init_fresh_group();
+
+    /* Encrypt valid packet */
+    uint8_t pcm[] = {0xAA, 0xBB, 0xCC, 0xDD};
+    uint8_t pkt[128];
+    int pkt_len = group_mgr_encrypt(pcm, sizeof(pcm), 42, pkt, sizeof(pkt));
+    TEST_ASSERT_GREATER_THAN(0, pkt_len);
+
+    /* Remove last byte (truncates GCM tag) */
+    uint8_t out[64];
+    int result = group_mgr_decrypt(pkt, pkt_len - 1, NULL, out, sizeof(out));
+    TEST_ASSERT_EQUAL_INT(-1, result); /* GCM auth should fail */
+}
+
 void test_group_mgr_nvs_persistence_across_reinit(void)
 {
     /* T11: Save a key, re-init group_mgr, verify the key persists via NVS mock.
