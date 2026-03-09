@@ -18,6 +18,8 @@ extern void test_vad_threshold_boundary(void);
 extern void test_dedup_rejects_duplicate_seq(void);
 extern void test_dedup_accepts_new_seq(void);
 extern void test_dedup_window_wraps(void);
+extern void test_vad_hold_short_silence_stays_active(void);
+extern void test_vad_hold_long_silence_deactivates(void);
 
 /* test_bt_hfp_buffer.c */
 extern void test_stream_buffer_write_read(void);
@@ -51,6 +53,8 @@ int main(void)
     RUN_TEST(test_dedup_rejects_duplicate_seq);
     RUN_TEST(test_dedup_accepts_new_seq);
     RUN_TEST(test_dedup_window_wraps);
+    RUN_TEST(test_vad_hold_short_silence_stays_active);
+    RUN_TEST(test_vad_hold_long_silence_deactivates);
 
     /* bt_hfp SCO buffer tests */
     RUN_TEST(test_stream_buffer_write_read);

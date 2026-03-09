@@ -13,6 +13,9 @@
 
 #include <string.h>
 
+/* ---- Mock time ---- */
+int64_t mock_time_us = 1000000; /* start at 1s to avoid edge cases with 0 */
+
 /* ---- Unity setUp/tearDown ---- */
 void setUp(void) {}
 void tearDown(void) {}
@@ -24,6 +27,7 @@ mock_state_t g_mock = {0};
 void mock_state_reset(void)
 {
     memset(&g_mock, 0, sizeof(g_mock));
+    mock_time_us = 1000000; /* reset to 1s */
     nvs_mock_reset();
 }
 

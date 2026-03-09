@@ -38,6 +38,10 @@ static int64_t s_last_tx_us = 0;
 static int64_t s_last_rx_us = 0;
 #define ACTIVITY_TIMEOUT_US  500000  /* 500ms */
 
+/* VAD hold time: keep transmitting for VAD_HOLD_MS after last voice frame */
+static int64_t s_last_voice_us = 0;
+#define VAD_HOLD_US  ((int64_t)VAD_HOLD_MS * 1000)
+
 /* ---- VAD ---- */
 
 static bool vad_detect(const uint8_t *pcm, size_t len)
@@ -78,6 +82,7 @@ static void record_seq(uint16_t seq)
 esp_err_t audio_pipe_init(void)
 {
     s_tx_seq = (uint16_t)(esp_random() & 0xFFFF);
+    s_last_voice_us = 0;
     memset(s_seen_seq, 0xFF, sizeof(s_seen_seq)); /* 0xFFFF = invalid seq */
     ESP_LOGI(TAG, "Audio pipeline initialized (PCM %dHz, VAD threshold %d)",
              PCM_SAMPLE_RATE, VAD_THRESHOLD);
@@ -86,8 +91,17 @@ esp_err_t audio_pipe_init(void)
 
 void audio_pipe_send(const uint8_t *pcm, size_t len)
 {
-    /* VAD gate */
-    if (!vad_detect(pcm, len)) return;
+    /* VAD gate with hold time */
+    bool voice_now = vad_detect(pcm, len);
+    if (voice_now) {
+        s_last_voice_us = esp_timer_get_time();
+    } else {
+        /* Check hold time: keep active for VAD_HOLD_MS after last voice */
+        int64_t elapsed = esp_timer_get_time() - s_last_voice_us;
+        if (s_last_voice_us == 0 || elapsed > VAD_HOLD_US) {
+            return; /* No voice and hold expired — drop frame */
+        }
+    }
 
     /* Encrypt */
     uint8_t pkt[250];

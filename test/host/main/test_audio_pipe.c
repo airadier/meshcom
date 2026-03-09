@@ -8,6 +8,7 @@
 #include "unity.h"
 #include "audio_pipe.h"
 #include "group_mgr.h"
+#include "esp_timer.h"
 #include "mocks.h"
 #include <string.h>
 #include <math.h>
@@ -169,4 +170,48 @@ void test_dedup_window_wraps(void)
     int pkt_len = make_encrypted_packet(0, pkt, sizeof(pkt));
     audio_pipe_receive(pkt, pkt_len);
     TEST_ASSERT_EQUAL_INT(65, g_mock.bt_hfp_send_audio_calls);
+}
+
+/* ---- VAD hold time tests ---- */
+
+void test_vad_hold_short_silence_stays_active(void)
+{
+    setup();
+
+    int16_t loud[30];
+    gen_loud(loud, 30, 5000);
+
+    int16_t silence[30];
+    gen_silence(silence, 30);
+
+    /* Send a loud frame — voice detected */
+    mock_time_set(1000000); /* t=1s */
+    audio_pipe_send((uint8_t *)loud, sizeof(loud));
+    TEST_ASSERT_EQUAL_INT(1, g_mock.espnow_broadcast_calls);
+
+    /* Send silence after 100ms (< VAD_HOLD_MS=250ms) — should still transmit */
+    mock_time_advance(100000); /* +100ms */
+    audio_pipe_send((uint8_t *)silence, sizeof(silence));
+    TEST_ASSERT_EQUAL_INT(2, g_mock.espnow_broadcast_calls);
+}
+
+void test_vad_hold_long_silence_deactivates(void)
+{
+    setup();
+
+    int16_t loud[30];
+    gen_loud(loud, 30, 5000);
+
+    int16_t silence[30];
+    gen_silence(silence, 30);
+
+    /* Send a loud frame — voice detected */
+    mock_time_set(1000000); /* t=1s */
+    audio_pipe_send((uint8_t *)loud, sizeof(loud));
+    TEST_ASSERT_EQUAL_INT(1, g_mock.espnow_broadcast_calls);
+
+    /* Send silence after 300ms (> VAD_HOLD_MS=250ms) — should be dropped */
+    mock_time_advance(300000); /* +300ms */
+    audio_pipe_send((uint8_t *)silence, sizeof(silence));
+    TEST_ASSERT_EQUAL_INT(1, g_mock.espnow_broadcast_calls); /* still 1 = dropped */
 }

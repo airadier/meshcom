@@ -23,3 +23,6 @@ bool audio_pipe_is_tx(void);
 
 /** Returns true if currently receiving */
 bool audio_pipe_is_rx(void);
+
+/** VAD hold time in milliseconds — keeps VAD active after last voice frame */
+#define VAD_HOLD_MS 250
