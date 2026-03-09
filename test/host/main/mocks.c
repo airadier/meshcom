@@ -8,9 +8,14 @@
 #include "espnow_comm.h"
 #include "bt_hfp.h"
 #include "ui.h"
+#include "nvs.h"
 #include "esp_err.h"
 
 #include <string.h>
+
+/* ---- Unity setUp/tearDown ---- */
+void setUp(void) {}
+void tearDown(void) {}
 
 /* ---- Mock state ---- */
 
@@ -19,6 +24,7 @@ mock_state_t g_mock = {0};
 void mock_state_reset(void)
 {
     memset(&g_mock, 0, sizeof(g_mock));
+    nvs_mock_reset();
 }
 
 /* ---- ESP-NOW stubs ---- */

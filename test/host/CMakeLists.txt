@@ -14,7 +14,11 @@ if(NOT IDF_PATH)
     endif()
 endif()
 
-set(MBEDTLS_DIR ${IDF_PATH}/components/mbedtls/mbedtls)
+if(DEFINED ENV{MBEDTLS_DIR})
+    set(MBEDTLS_DIR $ENV{MBEDTLS_DIR})
+else()
+    set(MBEDTLS_DIR ${IDF_PATH}/components/mbedtls/mbedtls)
+endif()
 set(UNITY_DIR   ${IDF_PATH}/components/unity/unity/src)
 
 # --- mbedTLS (just the crypto library) ---
@@ -28,8 +32,8 @@ add_library(unity STATIC ${UNITY_DIR}/unity.c)
 target_include_directories(unity PUBLIC ${UNITY_DIR})
 
 # --- ESP-IDF stubs (minimal types for host compilation) ---
-add_library(esp_stubs INTERFACE)
-target_include_directories(esp_stubs INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/esp_stubs)
+add_library(esp_stubs STATIC ${CMAKE_CURRENT_SOURCE_DIR}/esp_stubs/nvs_mock.c)
+target_include_directories(esp_stubs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/esp_stubs)
 
 # --- Test executable ---
 add_executable(meshcom_host_test
