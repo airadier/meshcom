@@ -15,6 +15,9 @@ esp_err_t pairing_start_share(void);
 /** Start listening for a group key broadcast (30s) */
 esp_err_t pairing_start_join(void);
 
+/** Stop any active pairing mode (share or join) */
+void pairing_stop(void);
+
 /** Check if pairing is currently active */
 bool pairing_is_active(void);
 

@@ -73,6 +73,28 @@ static void share_task(void *arg)
 
 /* ---- Public API ---- */
 
+void pairing_stop(void)
+{
+    if (!s_active) return;
+
+    ESP_LOGI(TAG, "Stopping active pairing mode");
+    s_active = false;
+    s_sharing = false;
+
+    if (s_timer) xTimerStop(s_timer, 0);
+
+    /* Wait for share task to finish if running */
+    if (s_share_task) {
+        /* The share_task checks s_sharing and will exit on next iteration */
+        int timeout = 50; /* 50 * 10ms = 500ms max wait */
+        while (s_share_task && timeout-- > 0) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+
+    ui_set_state(UI_STATE_IDLE);
+}
+
 esp_err_t pairing_start_share(void)
 {
     if (s_active) return ESP_ERR_INVALID_STATE;
@@ -94,7 +116,14 @@ esp_err_t pairing_start_share(void)
 
 esp_err_t pairing_start_join(void)
 {
-    if (s_active) return ESP_ERR_INVALID_STATE;
+    if (s_active) {
+        /* If sharing, stop it first to allow joining */
+        if (s_sharing) {
+            pairing_stop();
+        } else {
+            return ESP_ERR_INVALID_STATE;
+        }
+    }
 
     ESP_LOGI(TAG, "Starting JOIN mode (30s)");
     s_active = true;
