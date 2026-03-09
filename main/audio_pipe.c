@@ -10,6 +10,7 @@
 
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_random.h"
 
 #include <string.h>
 #include <stdbool.h>
@@ -76,6 +77,7 @@ static void record_seq(uint16_t seq)
 
 esp_err_t audio_pipe_init(void)
 {
+    s_tx_seq = (uint16_t)(esp_random() & 0xFFFF);
     memset(s_seen_seq, 0xFF, sizeof(s_seen_seq)); /* 0xFFFF = invalid seq */
     ESP_LOGI(TAG, "Audio pipeline initialized (PCM %dHz, VAD threshold %d)",
              PCM_SAMPLE_RATE, VAD_THRESHOLD);
